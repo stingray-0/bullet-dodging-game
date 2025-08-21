@@ -83,7 +83,7 @@ def show_credits_screen(window):
     credits_title_text = big_font.render("Game Developed by: ", True, (255,255,255))
     credits_text_1 = small_font.render("BlueStingray, Treeman,", True, (255, 255, 255))
     credits_text_2 = small_font.render("abbabba, Chamber,", True, (255, 255, 255))
-    credits_text_3 = small_font.render("and Chenmeow_ike", True, (255, 255, 255))
+    credits_text_3 = small_font.render("and Ycccccccccc", True, (255, 255, 255))
 
     credits_title_text_rect = credits_title_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 - 20))
     credits_text_rect_1 = credits_text_1.get_rect(center=(WIDTH // 2 , HEIGHT // 3 + 70))

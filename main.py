@@ -29,38 +29,35 @@ g_pattern =[[1,"down"], [1,"up"], [1,"left"],[1,"right"],[1,"left"],[1,"down"],[
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
 def show_start_menu(window):
-    font = pygame.font.SysFont("Times New Roman", 74)  
-    small_font = pygame.font.SysFont("asset/fonts/PixelifySans-Regular.ttf", 50)  
-
+    font = pygame.font.SysFont("Times New Roman", 100)  
+    small_font = pygame.font.Font("assets/fonts/PixelifySans-Regular.ttf", 50)  
+    middle_font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 80)
     menu_text = font.render("gEnsHin imPaCt", True, (255, 255, 255))
-    instruction_text = small_font.render("click to start", True, (255, 255, 255))
-    credits = small_font.render("credits", True, (255,255,255))
 
     clock = pygame.time.Clock()
     instruction_y = HEIGHT // 2
-    amplitude = 10  
+    amplitude = 20  
     frequency = 1   
 
     running = True
     while running:
         window.fill(BG_COLOR)  
-
         
         offset = amplitude * math.sin(pygame.time.get_ticks() / 1000 * frequency)
-        animated_y = instruction_y + offset
+        animated_y = instruction_y + offset + 100
 
-        
+        instruction_text = middle_font.render("Click to Start", True, (255, 255, 255))
+        credits = small_font.render("credits", True, (255,255,255))
         title_rect = menu_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         instruction_rect = instruction_text.get_rect(center=(WIDTH // 2, animated_y))
         credits_rect = credits.get_rect(center = (WIDTH // 2, HEIGHT // (1.2)))
 
+        mouse_pos = pygame.mouse.get_pos()
+        if credits_rect.collidepoint(mouse_pos):
+            credits = small_font.render("credits", True, (200, 200, 200))
+        if instruction_rect.collidepoint(mouse_pos):
+            instruction_text = middle_font.render("Click to Start", True, (200, 200, 200))
         
-        window.blit(menu_text, title_rect)
-        window.blit(instruction_text, instruction_rect)
-        window.blit(credits, credits_rect)
-
-        pygame.display.update()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -71,15 +68,29 @@ def show_start_menu(window):
                             show_credits_screen(window)
                         if instruction_rect.collidepoint(event.pos):
                             running = False
+                                                     
+        window.blit(menu_text, title_rect)
+        window.blit(instruction_text, instruction_rect)
+        window.blit(credits, credits_rect)
 
+        pygame.display.update()
         clock.tick(FPS)
         
 def show_credits_screen(window):
-    font = pygame.font.Font(None, 50)  
-    back_button_font = pygame.font.Font(None, 40)
+    big_font = pygame.font.Font(None, 100)
+    small_font = pygame.font.Font(None, 60)
 
-    credits_text = font.render("Game Developed by: rahhhhhhh", True, (255,255,255))
-    back_button = back_button_font.render("back to Main Menu", True, (255,255,255))
+    credits_title_text = big_font.render("Game Developed by: ", True, (255,255,255))
+    credits_text_1 = small_font.render("BlueStingray, Treeman,", True, (255, 255, 255))
+    credits_text_2 = small_font.render("abbabba, Chamber,", True, (255, 255, 255))
+    credits_text_3 = small_font.render("and Chenmeow_ike", True, (255, 255, 255))
+
+    credits_title_text_rect = credits_title_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 - 20))
+    credits_text_rect_1 = credits_text_1.get_rect(center=(WIDTH // 2 , HEIGHT // 3 + 70))
+    credits_text_rect_2 = credits_text_2.get_rect(center=(WIDTH // 2 , HEIGHT // 3 + 140))
+    credits_text_rect_3 = credits_text_3.get_rect(center=(WIDTH // 2 , HEIGHT // 3 + 210))
+
+
 
     clock = pygame.time.Clock()
     running = True
@@ -87,15 +98,13 @@ def show_credits_screen(window):
     while running:
         window.fill(BG_COLOR)
 
-        
-        credits_text_rect = credits_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+        back_button = small_font.render("Back to Main Menu", True, (255,255,255)) 
         back_button_rect = back_button.get_rect(center=(WIDTH // 2, HEIGHT - 100))
 
-        
-        window.blit(credits_text, credits_text_rect)
-        window.blit(back_button, back_button_rect)
+        mouse_pos = pygame.mouse.get_pos()
+        if (back_button_rect.collidepoint(mouse_pos)):
+            back_button = small_font.render("Back to Main Menu", True, (200, 200, 200))
 
-        pygame.display.update()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -106,16 +115,25 @@ def show_credits_screen(window):
                 if event.button == 1:  
                     if back_button_rect.collidepoint(event.pos):
                         return  
+        window.blit(credits_title_text, credits_title_text_rect)
+        window.blit(credits_text_1, credits_text_rect_1)
+        window.blit(credits_text_2, credits_text_rect_2)
+        window.blit(credits_text_3, credits_text_rect_3)
+        window.blit(back_button, back_button_rect)
 
+        pygame.display.update()
         clock.tick(FPS)
 
 def killed_by_paimon(window,score):
     font = pygame.font.Font("assets/fonts/Butcherman-Regular.ttf", 200)
-    font_2 = pygame.font.SysFont("asset/fonts/PixelifySans-Regular.ttf", 50) 
+    font_2 = pygame.font.Font(None, 100) 
+    # font_3 = pygame.font.SysFont("asset/fonts/PixelifySans-Regular.tff", 75)
+    font_3 = pygame.font.Font("assets/fonts/Bidenatrial.ttf", 75)
     death_text = font.render("YOU DIED" , True, (255, 0, 0)) 
-    score_text = font_2.render("Score: " + str(score), True, (255, 0, 0))
-    death_text_rect = death_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    score_text_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 +200))
+    score_text = font_2.render("Score: " + str(score), True, (255, 255, 255))
+    death_text_rect = death_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 200))
+    score_text_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+
 
 
     darken = pygame.Surface((WIDTH, HEIGHT))
@@ -126,30 +144,48 @@ def killed_by_paimon(window,score):
     run = True
 
     while run:
-        clock.tick(FPS)
+        home_text = font_3.render("Home", True, (255, 255, 255))
+        retry_text = font_3.render("Try Again", True, (255, 255, 255))
+        retry_text_rect = retry_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 200))
+        home_text_rect = home_text.get_rect(center = (WIDTH // 2, HEIGHT // 2 + 300))
+
+        mouse_pos = pygame.mouse.get_pos()
+        if retry_text_rect.collidepoint(mouse_pos):
+            retry_text = font_3.render("Try Again", True, (200, 200, 200))
+        if home_text_rect.collidepoint(mouse_pos):
+            home_text = font_3.render("Home", True, (200, 200, 200))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
                 quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        if retry_text_rect.collidepoint(event.pos):
+                            main(window)
+                            run = False
+                        if home_text_rect.collidepoint(event.pos):
+                            show_start_menu(window)
+                            run = False
 
         
         if transparency < 255:
-            transparency += 0.05  
+            transparency = (transparency + 0.5)*1.1
+        if transparency > 255:
+            transparency = 255
 
-        
         faded_text = death_text.copy()  
-        faded_text.fill((255, 0, 0, transparency*1.1), special_flags=pygame.BLEND_RGBA_MULT)
-
-        
+        faded_text.fill((255, 0, 0, transparency), special_flags=pygame.BLEND_RGBA_MULT)
         darken.set_alpha(transparency)
-
         
         window.blit(darken, (0, 0))  
+        window.blit(retry_text, retry_text_rect.topleft)
         window.blit(faded_text, death_text_rect.topleft)
         window.blit(score_text, score_text_rect.topleft)
-
+        window.blit(home_text, home_text_rect.topleft)
+        
+        clock.tick(FPS)
         pygame.display.update()  
 
 
@@ -174,7 +210,7 @@ def load_sprite_sheets(dir1, dir2, width, height, horizontal_flip = False, verti
             rect = pygame.Rect(i * width, 0,width, height)
             surface.blit(sprite_sheet, (0,0), rect)
             if scale:
-                sprites.append(pygame.transform.scale2x(surface))
+                sprites.append(pygame.transform.scale_by(surface, 1.5))
             else:
                 sprites.append(surface)
         
@@ -558,7 +594,7 @@ def main(window): #就main，沒什麼好說的?
     player = Player(600, 480, 32, 32)
     health = Health(50, 50, 100, 10, 100)
     score = Score(0,0)
-
+    dead = False
     #畫框框
     floor  = [Block(i * block_size, HEIGHT - block_size, block_size) for i in range(WIDTH // block_size)]
     ceil = [Block(i * block_size, 2 * block_size, block_size) for i in range(WIDTH // block_size)]
@@ -576,10 +612,11 @@ def main(window): #就main，沒什麼好說的?
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    run = False
-                    break
+                    pygame.quit()
+                    quit()
             if health.hp <= 0:
-                killed_by_paimon(window,score.score)
+                dead = True
+                break
             player.loop(FPS)
 
             for bullet in bullet1:
@@ -599,11 +636,13 @@ def main(window): #就main，沒什麼好說的?
         pattern_index += 1
         if pattern_index >= len(g_pattern):
             pattern_index = 0
-        
+        if dead:
+            killed_by_paimon(window,score.score)
+            break
 
-    pygame.quit()
-    quit()
+
 
 if __name__ == "__main__":  #如果直接跑這個程式才會做main，import則不會
-    show_start_menu(window)
-    main(window)
+    while True:
+        show_start_menu(window)
+        main(window)

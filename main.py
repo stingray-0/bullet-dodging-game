@@ -6,6 +6,40 @@ from os import listdir
 from os.path import isfile, join
 pygame.init()
 
+try:
+    pygame.mixer.init()
+except Exception as e:
+    print("Mixer Initialization Failed:", e)
+
+if pygame.mixer.get_init():
+    pygame.mixer.set_num_channels(8)
+
+# audio files (create folder assets/sounds and put music.mp3, death.wav etc)
+MAIN_MUSIC_PATH = join("assets", "Sounds", "megalovania.mp3")
+MENU_MUSIC_PATH = join("assets", "Sounds", "start_menu.mp3")
+DEATH_SFX_PATH = join("assets", "Sounds", "metal_pipe.wav")
+HURT_SFX_PATH = join("assets", "Sounds", "classic_hurt.wav")
+
+main_music_loaded = False
+menu_music_loaded = False
+death_sfx = None
+hurt_sfx = None
+
+
+if isfile(DEATH_SFX_PATH):
+    try:
+        death_sfx = pygame.mixer.Sound(DEATH_SFX_PATH)
+        death_sfx.set_volume(0.8)
+    except Exception as e:
+        print("Could not load death sfx:", e)
+
+if isfile(HURT_SFX_PATH):
+    try:
+        hurt_sfx = pygame.mixer.Sound(HURT_SFX_PATH)
+        hurt_sfx.set_volume(0.6)
+    except Exception as e:
+        print("Could not load hurt sfx:", e)
+
 pygame.display.set_caption("Platformer")
 
 BG_COLOR = (0, 0, 0)
@@ -13,7 +47,7 @@ WIDTH, HEIGHT = 880, 960
 FPS = 60
 PLAYER_VEL = 5
 BULLET_NUMBER = 20
-
+high_score = 0
 block_size = 40
 g_pattern =[[1,"down"], [1,"up"], [1,"left"],[1,"right"],[1,"left"],[1,"down"],[1,"down"],
             [1,"down"], [1,"up"], [1,"left"],[1,"right"],[1,"left"],[1,"down"],[1,"down"],
@@ -38,6 +72,15 @@ def show_start_menu(window):
     instruction_y = HEIGHT // 2
     amplitude = 20  
     frequency = 1   
+    if isfile(MENU_MUSIC_PATH):
+        try:
+            pygame.mixer.music.load(MENU_MUSIC_PATH)
+            menu_music_loaded = True
+        except Exception as e:
+            print("Could not load menu music:", e)
+
+    if menu_music_loaded and not pygame.mixer.music.get_busy():
+        pygame.mixer.music.play(-1)
 
     running = True
     while running:
@@ -119,7 +162,7 @@ def show_credits_screen(window):
         window.blit(credits_text_1, credits_text_rect_1)
         window.blit(credits_text_2, credits_text_rect_2)
         window.blit(credits_text_3, credits_text_rect_3)
-        window.blit(back_button, back_button_rect)
+        window.blit(back_button, back_button_rect)  
 
         pygame.display.update()
         clock.tick(FPS)
@@ -133,12 +176,18 @@ def killed_by_paimon(window,score):
     score_text = font_2.render("Score: " + str(score), True, (255, 255, 255))
     death_text_rect = death_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 200))
     score_text_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-
-
+    global high_score 
+    high_score_text = font_2.render("High Score: " + str(high_score), True, (255, 255, 255))
+    high_score_text_rect = high_score_text.get_rect(center = (WIDTH//2, HEIGHT // 2 - 50))
 
     darken = pygame.Surface((WIDTH, HEIGHT))
     darken.fill((0, 0, 0))  
     transparency = 0  
+
+    if pygame.mixer.get_init():
+        pygame.mixer.music.stop()
+        if death_sfx:
+            death_sfx.play()
 
     clock = pygame.time.Clock()
     run = True
@@ -183,6 +232,7 @@ def killed_by_paimon(window,score):
         window.blit(retry_text, retry_text_rect.topleft)
         window.blit(faded_text, death_text_rect.topleft)
         window.blit(score_text, score_text_rect.topleft)
+        window.blit(high_score_text, high_score_text_rect.topleft)
         window.blit(home_text, home_text_rect.topleft)
         
         clock.tick(FPS)
@@ -384,9 +434,9 @@ class Bullet(pygame.sprite.Sprite):
 
     def update_sprite(self):
         if self.time >self.wait:
-            sprite_sheet = "bullet_move"
+            sprite_sheet = "bullet_move_primo"
         else:
-            sprite_sheet = "bullet_prepare"
+            sprite_sheet = "bullet_prepare_primo"
 
         sprite_sheet_name = sprite_sheet
         sprites = self.SPRITES[sprite_sheet_name]
@@ -438,10 +488,9 @@ def get_background(name):   #拼出背景
 
     return tiles, image
 
-def draw(window, background, bg_image, player, objects, health, bullets, score):    #把遊戲畫面上看見的東西畫出來
+def draw(window, background, bg_image, player, objects, health, bullets, score, highscore, highscore_rect):    #把遊戲畫面上看見的東西畫出來
     for tile in background:
         window.blit(bg_image, tile)
-    
     for bullet in bullets:
         bullet.draw(window)
 
@@ -451,6 +500,7 @@ def draw(window, background, bg_image, player, objects, health, bullets, score):
     player.draw(window)
     health.draw(window)
     score.draw(window)
+    window.blit(highscore, highscore_rect)
   
     pygame.display.update()
 
@@ -489,6 +539,8 @@ def bullet_collide(player, bullets, health):
         if pygame.sprite.collide_mask(player, bullet) and player.parry == 0:
             health.hp -= 10
             player.parry = 30
+            return True
+    return False
 
 
 def handle_move(player, objects):   #控制上下左右
@@ -590,10 +642,11 @@ def main(window): #就main，沒什麼好說的?
     clock = pygame.time.Clock()
     pattern_index = 0
     background, bg_image = get_background("Blue.png")
-
+    font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 50)
     player = Player(600, 480, 32, 32)
     health = Health(50, 50, 100, 10, 100)
     score = Score(0,0)
+    global high_score
     dead = False
     #畫框框
     floor  = [Block(i * block_size, HEIGHT - block_size, block_size) for i in range(WIDTH // block_size)]
@@ -603,6 +656,15 @@ def main(window): #就main，沒什麼好說的?
     frame = [*floor, *wall1, *wall2, *ceil]
 
     bullet1 = [Bullet(random.randint(1,20)*block_size, 3*block_size, 40, "down", 10) for i in range(BULLET_NUMBER)]
+
+    if isfile(MAIN_MUSIC_PATH):
+        try:
+            pygame.mixer.music.load(MAIN_MUSIC_PATH)
+            main_music_loaded = True
+        except Exception as e:
+            print("Could not load main music:", e)
+    if main_music_loaded and not pygame.mixer.music.get_busy():
+        pygame.mixer.music.play(-1)
 
     #這裡的會一直跑
     run = True
@@ -623,15 +685,27 @@ def main(window): #就main，沒什麼好說的?
                 bullet.loop()
                 
 
-            bullet_collide(player,bullet1, health)
+            if bullet_collide(player,bullet1, health):
+                if pygame.mixer.get_init() and hurt_sfx:
+                    ch = pygame.mixer.find_channel()
+                    if ch:
+                        ch.play(hurt_sfx)
 
+
+            high_score_text = font.render(f"HIGHSCORE: {high_score}", True, (255, 255, 255))
+            high_score_text_rect = high_score_text.get_rect(center =(WIDTH - 200, 40))
 
             handle_move(player, frame)
-            draw(window, background, bg_image, player, frame, health, bullet1, score)
+            draw(window, background, bg_image, player, frame, health, bullet1, score, high_score_text, high_score_text_rect)
+
             score.score += 1
 
+            
+            if (score.score > high_score):
+                high_score = score.score
             if (bullet1[0].y < 3*block_size) or (bullet1[0].y > HEIGHT) or (bullet1[0].x < 0) or (bullet1[0].x > WIDTH):
                 break
+
         next_run(bullet1, pattern_index)
         pattern_index += 1
         if pattern_index >= len(g_pattern):

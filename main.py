@@ -7,7 +7,7 @@ from os.path import isfile, join
 from patterns import patterns
 
 pygame.init()
-pygame.display.set_caption("Platformer")
+pygame.display.set_caption("Primo Dodger")
 
 try:
     pygame.mixer.init()
@@ -51,16 +51,18 @@ PLAYER_VEL = 5
 MAX_BULLET_NUMBER = 20
 high_score = 0
 bullet_speed = 10
-bullet_wait = 60 
+bullet_wait = 100
 BLOCK_SIZE = 40
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
 def show_start_menu(window):
-    font = pygame.font.SysFont("Times New Roman", 100)  
+    # font = pygame.font.SysFont("Times New Roman", 100)  
+    font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 120)
+
     small_font = pygame.font.Font("assets/fonts/PixelifySans-Regular.ttf", 50)  
     middle_font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 80)
-    menu_text = font.render("gEnsHin imPaCt", True, (255, 255, 255))
+    menu_text = font.render("pRimO DodGeR", True, (255, 255, 255))
 
     clock = pygame.time.Clock()
     instruction_y = HEIGHT // 2
@@ -352,7 +354,6 @@ class Player(pygame.sprite.Sprite):
         win.blit(self.sprite, (self.rect.x, self.rect.y))
 
 
-
 class Health(): #血條
     frame_COLOR = (0, 0, 0)
     COLOR = (255, 0, 0)
@@ -375,7 +376,6 @@ class Health(): #血條
         pygame.draw.rect(win, self.COLOR, (self.x, self.y, self.width * ratio, self.height))
 
 
-
 class Score():
     COLOR = (0, 0, 0)
     font = pygame.font.SysFont("Comic Sans MS", 30)
@@ -389,7 +389,6 @@ class Score():
         text = self.font.render("Score: "+str(self.score), False, self.COLOR)
         win.blit(text, (self.x, self.y))
         
-
 
 class Bullet(pygame.sprite.Sprite):
     COLOR = (255, 255, 255)
@@ -453,7 +452,6 @@ class Bullet(pygame.sprite.Sprite):
         
     def draw(self, win):
         win.blit(self.sprite, (self.x, self.y))
-
 
 
 class Object(pygame.sprite.Sprite): #非玩家物品
@@ -655,7 +653,6 @@ def new_bullet(direction:str, index:int, position: int, slots: list[int]):
     return Bullet(x, y, BLOCK_SIZE, bullet_dir, bullet_speed, bullet_wait)
 
 def spawn_wave(pattern_index: int):
-    global bullet_wait, bullet_speed
     spread = patterns[pattern_index][0]
     direction = patterns[pattern_index][1]
     if spread == 1:
@@ -663,11 +660,13 @@ def spawn_wave(pattern_index: int):
     elif spread == 2:
         slots = list(i for i in range(1, MAX_BULLET_NUMBER+1) if (i-1)%4 < 2)
     elif spread == 3:
-        slots = list(range(1, MAX_BULLET_NUMBER-3))
+        slots = list(range(1, MAX_BULLET_NUMBER-4))
     elif spread == 4:
-        slots = list(range(5, MAX_BULLET_NUMBER+1))
+        slots = list(range(6, MAX_BULLET_NUMBER+1))
+    elif spread == 5:
+        slots = list(range(1, MAX_BULLET_NUMBER+1)) 
     else:
-        slots = list(range(1, MAX_BULLET_NUMBER+1))  
+        slots = list(random.sample(range(1, MAX_BULLET_NUMBER+1), k = MAX_BULLET_NUMBER-10))
     
     wave = []
     for i, pos in enumerate(slots):
@@ -681,9 +680,13 @@ def main(window): #就main，沒什麼好說的?
     background, bg_image = get_background("Blue.png")
     font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 50)
     player = Player(600, 480, 32, 32)
-    health = Health(50, 50, 100, 10, 100)
+    health = Health(50, 50, 100, 10, 120)
     score = Score(0,0)
     global high_score
+    global bullet_wait
+    global bullet_speed
+    bullet_speed = 10
+    bullet_wait = 100
     dead = False
     #畫框框
     floor  = [Block(i * BLOCK_SIZE, HEIGHT - BLOCK_SIZE, BLOCK_SIZE) for i in range(WIDTH // BLOCK_SIZE)]
@@ -744,9 +747,10 @@ def main(window): #就main，沒什麼好說的?
         pattern_index += 1
         if pattern_index == len(patterns):
             pattern_index = 0
-            global bullet_speed, bullet_wait
             bullet_speed += 2
-            bullet_wait = max(0, bullet_wait-20)
+            bullet_wait = max(0, bullet_wait-20) + 40
+        elif pattern_index == 1:
+            bullet_wait -= 40
         bullets = spawn_wave(pattern_index)
         if dead:
             killed_by_paimon(window,score.score)

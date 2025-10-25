@@ -25,8 +25,9 @@
 #     speed: float = 1.0
 #     delay: int = 0
 
-patterns = [[1,"down"], [1,"up"], [3,"left"],[1,"right"],[2,"left"],[3,"down"],[2,"down"],
-            [1,"right"], [3,"up"], [1,"left"],[2,"right"],[4,"left"],[4,"up"],[1,"right"],
+patterns = [[6,"down"], [6,"up"], [2,"left"],[6,"right"],[2,"left"],[6,"down"],[6,"down"],
+            [4, "up"], [3, "left"], [1, "right"], [2, "left"], [3, "up"], [4, "left"], [1, "down"],
+            # [1,"right"], [3,"up"], [1,"left"],[2,"right"],[4,"left"],[4,"up"],[1,"right"],
             [5,"up_down"],[5,"down_up"],[4,"right"],[5,"right_left"],[3,"down"],
             [1,"up_down"],[1,"up_down"],[5,"left_right"],[1,"down_up"],[1,"right_left"],
             [5,"udlr"],[5,"lrud"],[1,"lrud"],[5,"left_right"],[3,"up"],[4,"right"],[5,"up_down"],

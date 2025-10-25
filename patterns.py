@@ -25,10 +25,10 @@
 #     speed: float = 1.0
 #     delay: int = 0
 
-patterns = [[1,"down"], [1,"up"], [3,"left"],[3,"right"],[2,"left"],[2,"down"],[1,"down"],
+patterns = [[1,"down"], [1,"up"], [3,"left"],[1,"right"],[2,"left"],[3,"down"],[2,"down"],
             [1,"right"], [3,"up"], [1,"left"],[2,"right"],[4,"left"],[4,"up"],[1,"right"],
-            [2,"up_down"],[5,"down_up"],[5,"left_right"],[5,"right_left"],[2,"left_right"],
-            [2,"up_down"],[1,"up_down"],[1,"left_right"],[1,"down_up"],[2,"right_left"],
-            [5,"udlr"],[5,"lrud"],[5,"lrud"],[5,"udlr"],[2,"udlr"],[2,"udlr"],[2,"lrud"],
-            [1,"udlr"],[1,"udlr"],[1,"udlr"],[1,"lrud"],[1,"udlr"],[1,"lrud"],[1,"udlr"],
-            [1,"right_left"],[1,"up_down"],[1,"udlr"],[1,"left_right"],[1,"lrud"],[1,"down_up"],[2,"udlr"],]
+            [5,"up_down"],[5,"down_up"],[4,"right"],[5,"right_left"],[3,"down"],
+            [1,"up_down"],[1,"up_down"],[5,"left_right"],[1,"down_up"],[1,"right_left"],
+            [5,"udlr"],[5,"lrud"],[1,"lrud"],[5,"left_right"],[3,"up"],[4,"right"],[5,"up_down"],
+            [1,"udlr"],[1,"lrud"],[1,"udlr"],[5,"lrud"],[5,"right_left"],[1,"left"],[1,"udlr"],
+            [1,"right_left"],[1,"up_down"],[1,"udlr"],[1,"lrud"],[1,"lrud"],[1,"udlr"],[1,"udlr"],]

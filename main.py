@@ -50,6 +50,8 @@ FPS = 60
 PLAYER_VEL = 5
 MAX_BULLET_NUMBER = 20
 high_score = 0
+bullet_speed = 10
+bullet_wait = 60 
 BLOCK_SIZE = 40
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -394,14 +396,14 @@ class Bullet(pygame.sprite.Sprite):
     ANIMATION_DELAY = 5
     SPRITES = load_sprite_sheets("Traps", "Bullet", 40, 40)
 
-    def __init__(self,x, y, size, direction, vel):
+    def __init__(self,x, y, size, direction, vel, wait):
         super().__init__()
         self.x = x
         self.y = y
         self.vel = vel
         self.size = size
         self.direction = direction
-        self.wait = 60
+        self.wait = wait
         self.time = 0
         self.rect = pygame.Rect(x, y, 2*size, 2*size)
         self.animation_count = 0
@@ -574,11 +576,11 @@ def new_bullet(direction:str, index:int, position: int, slots: list[int]):
             bullet_dir = "up"
         case "right":
             x = BLOCK_SIZE
-            y = (position+3) * BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
             bullet_dir = "right"
         case "left":
             x = WIDTH - 2*BLOCK_SIZE
-            y = (position+3) * BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
             bullet_dir = "left"
         case "down_up":
             x = position * BLOCK_SIZE
@@ -597,7 +599,7 @@ def new_bullet(direction:str, index:int, position: int, slots: list[int]):
                 y = 3 * BLOCK_SIZE
                 bullet_dir = "down"
         case "right_left":
-            y = (position+3) * BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
             if (index < len(slots) / 2):
                 x = BLOCK_SIZE
                 bullet_dir = "right"
@@ -605,7 +607,7 @@ def new_bullet(direction:str, index:int, position: int, slots: list[int]):
                 x = WIDTH - 2*BLOCK_SIZE
                 bullet_dir = "left"
         case "left_right":
-            y = (position+3) * BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
             if (index < len(slots) / 2):
                 x = WIDTH - 2*BLOCK_SIZE
                 bullet_dir = "left"
@@ -623,45 +625,47 @@ def new_bullet(direction:str, index:int, position: int, slots: list[int]):
                 y = 3 * BLOCK_SIZE
                 bullet_dir = "down"
             elif index < 3*quarter:
-                x = BLOCK_SIZE
-                y = (position+3) * BLOCK_SIZE
+                x = WIDTH - 2*BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
                 bullet_dir = "left"
             else:
-                x = WIDTH - 2*BLOCK_SIZE
-                y = (position+3) * BLOCK_SIZE
+                x = BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
                 bullet_dir = "right"
         case "lrud":
             quarter = len(slots) / 4
             if index < quarter:
-                x = BLOCK_SIZE
-                y = (position+3) * BLOCK_SIZE
+                x = WIDTH - 2*BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
                 bullet_dir = "left"
             elif index < 2*quarter:
-                x = WIDTH - 2*BLOCK_SIZE
-                y = (position+3) * BLOCK_SIZE
+                x = BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
                 bullet_dir = "right"
             elif index < 3*quarter:
                 x = position * BLOCK_SIZE
-                y = 3 * BLOCK_SIZE
+                y = HEIGHT - 2*BLOCK_SIZE
                 bullet_dir = "up"
             else:
                 x = position * BLOCK_SIZE
-                y = HEIGHT - 2*BLOCK_SIZE
+                y = 3 * BLOCK_SIZE
                 bullet_dir = "down"
-
-    return Bullet(x, y, BLOCK_SIZE, bullet_dir, 10)
+    global bullet_speed
+    global bullet_wait
+    return Bullet(x, y, BLOCK_SIZE, bullet_dir, bullet_speed, bullet_wait)
 
 def spawn_wave(pattern_index: int):
+    global bullet_wait, bullet_speed
     spread = patterns[pattern_index][0]
     direction = patterns[pattern_index][1]
     if spread == 1:
         slots = list(random.sample(range(1, MAX_BULLET_NUMBER+1), k = MAX_BULLET_NUMBER-6))
     elif spread == 2:
-        slots = list(range(1, MAX_BULLET_NUMBER+1, 3))
+        slots = list(i for i in range(1, MAX_BULLET_NUMBER+1) if (i-1)%4 < 2)
     elif spread == 3:
-        slots = list(range(1, MAX_BULLET_NUMBER-5))
+        slots = list(range(1, MAX_BULLET_NUMBER-3))
     elif spread == 4:
-        slots = list(range(7, MAX_BULLET_NUMBER+1))
+        slots = list(range(5, MAX_BULLET_NUMBER+1))
     else:
         slots = list(range(1, MAX_BULLET_NUMBER+1))  
     
@@ -738,9 +742,12 @@ def main(window): #就main，沒什麼好說的?
             draw(window, background, bg_image, player, frame, health, bullets, score, high_score_text, high_score_text_rect)
 
         pattern_index += 1
-        bullets = spawn_wave(pattern_index)
-        if pattern_index >= len(patterns):
+        if pattern_index == len(patterns):
             pattern_index = 0
+            global bullet_speed, bullet_wait
+            bullet_speed += 2
+            bullet_wait = max(0, bullet_wait-20)
+        bullets = spawn_wave(pattern_index)
         if dead:
             killed_by_paimon(window,score.score)
             break

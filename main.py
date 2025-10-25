@@ -4,27 +4,55 @@ import math
 import pygame
 from os import listdir
 from os.path import isfile, join
-pygame.init()
+from patterns import patterns
 
+pygame.init()
 pygame.display.set_caption("Platformer")
+
+try:
+    pygame.mixer.init()
+except Exception as e:
+    print("Mixer Initialization Failed:", e)
+
+if pygame.mixer.get_init():
+    pygame.mixer.set_num_channels(8)
+
+# audio files (create folder assets/sounds and put music.mp3, death.wav etc)
+MAIN_MUSIC_PATH = join("assets", "Sounds", "megalovania.mp3")
+MENU_MUSIC_PATH = join("assets", "Sounds", "start_menu.mp3")
+DEATH_SFX_PATH = join("assets", "Sounds", "metal_pipe.wav")
+HURT_SFX_PATH = join("assets", "Sounds", "classic_hurt.wav")
+
+main_music_loaded = False
+menu_music_loaded = False
+death_sfx = None
+hurt_sfx = None
+
+
+if isfile(DEATH_SFX_PATH):
+    try:
+        death_sfx = pygame.mixer.Sound(DEATH_SFX_PATH)
+        death_sfx.set_volume(0.8)
+    except Exception as e:
+        print("Could not load death sfx:", e)
+
+if isfile(HURT_SFX_PATH):
+    try:
+        hurt_sfx = pygame.mixer.Sound(HURT_SFX_PATH)
+        hurt_sfx.set_volume(0.6)
+    except Exception as e:
+        print("Could not load hurt sfx:", e)
+
 
 BG_COLOR = (0, 0, 0)
 WIDTH, HEIGHT = 880, 960
 FPS = 60
 PLAYER_VEL = 5
-BULLET_NUMBER = 20
-
-block_size = 40
-g_pattern =[[1,"down"], [1,"up"], [1,"left"],[1,"right"],[1,"left"],[1,"down"],[1,"down"],
-            [1,"down"], [1,"up"], [1,"left"],[1,"right"],[1,"left"],[1,"down"],[1,"down"],
-            [1,"up_down"],[1,"up_down"],[1,"left_right"],[2,"left_right"],[1,"left_right"],
-            [1,"up_down"],[3,"up_down"],[4,"left_right"],[3,"left_right"],[4,"left_right"],
-            [1,"up_down"],[3,"up_down"],[1,"left_right"],[2,"left_right"],[1,"left_right"],
-            [3,"udlr"],[4,"udlr"],[3,"udlr"],[4,"udlr"],[1,"udlr"],[1,"udlr"],[1,"udlr"],
-            [1,"udlr"],[1,"udlr"],[1,"udlr"],[2,"udlr"],[1,"udlr"],[2,"udlr"],[1,"udlr"],
-            [1,"udlr"],[1,"udlr"],[2,"udlr"],[1,"udlr"],[3,"udlr"],[1,"udlr"],[2,"udlr"],
-            [1,"udlr"],[2,"udlr"],[3,"udlr"],[2,"udlr"],[1,"udlr"],[3,"udlr"],[1,"udlr"],
-            [1,"udlr"],[1,"udlr"],[3,"udlr"],[2,"udlr"],[1,"udlr"],[2,"udlr"],[1,"udlr"]]
+MAX_BULLET_NUMBER = 20
+high_score = 0
+bullet_speed = 10
+bullet_wait = 60 
+BLOCK_SIZE = 40
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 
@@ -38,6 +66,15 @@ def show_start_menu(window):
     instruction_y = HEIGHT // 2
     amplitude = 20  
     frequency = 1   
+    if isfile(MENU_MUSIC_PATH):
+        try:
+            pygame.mixer.music.load(MENU_MUSIC_PATH)
+            menu_music_loaded = True
+        except Exception as e:
+            print("Could not load menu music:", e)
+
+    if menu_music_loaded and not pygame.mixer.music.get_busy():
+        pygame.mixer.music.play(-1)
 
     running = True
     while running:
@@ -83,7 +120,7 @@ def show_credits_screen(window):
     credits_title_text = big_font.render("Game Developed by: ", True, (255,255,255))
     credits_text_1 = small_font.render("BlueStingray, Treeman,", True, (255, 255, 255))
     credits_text_2 = small_font.render("abbabba, Chamber,", True, (255, 255, 255))
-    credits_text_3 = small_font.render("and Chenmeow_ike", True, (255, 255, 255))
+    credits_text_3 = small_font.render("and Ycccccccccc", True, (255, 255, 255))
 
     credits_title_text_rect = credits_title_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 - 20))
     credits_text_rect_1 = credits_text_1.get_rect(center=(WIDTH // 2 , HEIGHT // 3 + 70))
@@ -119,7 +156,7 @@ def show_credits_screen(window):
         window.blit(credits_text_1, credits_text_rect_1)
         window.blit(credits_text_2, credits_text_rect_2)
         window.blit(credits_text_3, credits_text_rect_3)
-        window.blit(back_button, back_button_rect)
+        window.blit(back_button, back_button_rect)  
 
         pygame.display.update()
         clock.tick(FPS)
@@ -133,12 +170,18 @@ def killed_by_paimon(window,score):
     score_text = font_2.render("Score: " + str(score), True, (255, 255, 255))
     death_text_rect = death_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 200))
     score_text_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-
-
+    global high_score 
+    high_score_text = font_2.render("High Score: " + str(high_score), True, (255, 255, 255))
+    high_score_text_rect = high_score_text.get_rect(center = (WIDTH//2, HEIGHT // 2 - 50))
 
     darken = pygame.Surface((WIDTH, HEIGHT))
     darken.fill((0, 0, 0))  
     transparency = 0  
+
+    if pygame.mixer.get_init():
+        pygame.mixer.music.stop()
+        if death_sfx:
+            death_sfx.play()
 
     clock = pygame.time.Clock()
     run = True
@@ -183,6 +226,7 @@ def killed_by_paimon(window,score):
         window.blit(retry_text, retry_text_rect.topleft)
         window.blit(faded_text, death_text_rect.topleft)
         window.blit(score_text, score_text_rect.topleft)
+        window.blit(high_score_text, high_score_text_rect.topleft)
         window.blit(home_text, home_text_rect.topleft)
         
         clock.tick(FPS)
@@ -352,14 +396,14 @@ class Bullet(pygame.sprite.Sprite):
     ANIMATION_DELAY = 5
     SPRITES = load_sprite_sheets("Traps", "Bullet", 40, 40)
 
-    def __init__(self,x, y, size, direction, vel):
+    def __init__(self,x, y, size, direction, vel, wait):
         super().__init__()
         self.x = x
         self.y = y
         self.vel = vel
         self.size = size
         self.direction = direction
-        self.wait = 60
+        self.wait = wait
         self.time = 0
         self.rect = pygame.Rect(x, y, 2*size, 2*size)
         self.animation_count = 0
@@ -384,9 +428,9 @@ class Bullet(pygame.sprite.Sprite):
 
     def update_sprite(self):
         if self.time >self.wait:
-            sprite_sheet = "bullet_move"
+            sprite_sheet = "bullet_move_primo"
         else:
-            sprite_sheet = "bullet_prepare"
+            sprite_sheet = "bullet_prepare_primo"
 
         sprite_sheet_name = sprite_sheet
         sprites = self.SPRITES[sprite_sheet_name]
@@ -399,6 +443,13 @@ class Bullet(pygame.sprite.Sprite):
     def update_hitbox(self):
         self.rect = self.sprite.get_rect(topleft = (self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite) 
+
+    def is_offscreen(self):
+        if  self.y < 3*BLOCK_SIZE or self.y > HEIGHT:
+            return True
+        if self.x < 0 or self.x > WIDTH:
+            return True
+        return False
         
     def draw(self, win):
         win.blit(self.sprite, (self.x, self.y))
@@ -438,10 +489,9 @@ def get_background(name):   #拼出背景
 
     return tiles, image
 
-def draw(window, background, bg_image, player, objects, health, bullets, score):    #把遊戲畫面上看見的東西畫出來
+def draw(window, background, bg_image, player, objects, health, bullets, score, highscore, highscore_rect):    #把遊戲畫面上看見的東西畫出來
     for tile in background:
         window.blit(bg_image, tile)
-    
     for bullet in bullets:
         bullet.draw(window)
 
@@ -451,6 +501,7 @@ def draw(window, background, bg_image, player, objects, health, bullets, score):
     player.draw(window)
     health.draw(window)
     score.draw(window)
+    window.blit(highscore, highscore_rect)
   
     pygame.display.update()
 
@@ -489,7 +540,8 @@ def bullet_collide(player, bullets, health):
         if pygame.sprite.collide_mask(player, bullet) and player.parry == 0:
             health.hp -= 10
             player.parry = 30
-
+            return True
+    return False
 
 def handle_move(player, objects):   #控制上下左右
     keys = pygame.key.get_pressed()
@@ -512,102 +564,148 @@ def handle_move(player, objects):   #控制上下左右
     if (keys[pygame.K_DOWN] or keys[pygame.K_s])and not collide_down:
         player.move_down(PLAYER_VEL) 
 
-def next_run(bullets, pattern_index):
-    direction = g_pattern[pattern_index][1]
-
-    for i in range(len(bullets)):
-        bullet = bullets[i]
-        bullet.time = 0    
-
-        if direction == "down":
-            bullet.x = get_pattern(pattern_index,i)*bullet.size
-            bullet.y = 3*block_size
-            bullet.direction = "down"
-        elif direction == "up":
-            bullet.x = get_pattern(pattern_index,i)*bullet.size
-            bullet.y = HEIGHT - 2*block_size
-            bullet.direction = "up"
-        elif direction == "right":
-            bullet.x = block_size
-            bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-            bullet.direction = "right"
-        elif direction == "left":
-            bullet.x = WIDTH - 2*block_size
-            bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-            bullet.direction = "left"
-        elif direction == "up_down":
-            if i < 10:
-                bullet.x = get_pattern(pattern_index,i)*bullet.size
-                bullet.y = 3*block_size
-                bullet.direction = "down"
+def new_bullet(direction:str, index:int, position: int, slots: list[int]):
+    match direction:
+        case "down":
+            x = position * BLOCK_SIZE
+            y = 3 * BLOCK_SIZE
+            bullet_dir = "down"
+        case "up":
+            x = position * BLOCK_SIZE
+            y = HEIGHT - 2*BLOCK_SIZE
+            bullet_dir = "up"
+        case "right":
+            x = BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
+            bullet_dir = "right"
+        case "left":
+            x = WIDTH - 2*BLOCK_SIZE
+            y = (position+2) * BLOCK_SIZE
+            bullet_dir = "left"
+        case "down_up":
+            x = position * BLOCK_SIZE
+            if (index < len(slots) / 2):
+                y = 3 * BLOCK_SIZE
+                bullet_dir = "down"
             else:
-                bullet.x = get_pattern(pattern_index,i)*bullet.size
-                bullet.y = HEIGHT - 2*block_size
-                bullet.direction = "up"
-        elif direction == "left_right":
-            if i < 10:
-                bullet.x = block_size
-                bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-                bullet.direction = "right"
+                y = HEIGHT - 2*BLOCK_SIZE
+                bullet_dir = "up"
+        case "up_down":
+            x = position * BLOCK_SIZE
+            if (index < len(slots) / 2):
+                y = HEIGHT - 2*BLOCK_SIZE
+                bullet_dir = "up"
             else:
-                bullet.x = WIDTH - 2*block_size
-                bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-                bullet.direction = "left"
-        else:
-            if i < 5:
-                bullet.x = get_pattern(pattern_index,i)*bullet.size
-                bullet.y = 3*block_size
-                bullet.direction = "down"
-            elif i < 10:
-                bullet.x = get_pattern(pattern_index,i)*bullet.size
-                bullet.y = HEIGHT - 2*block_size
-                bullet.direction = "up"
-            elif i < 15:
-                bullet.x = block_size
-                bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-                bullet.direction = "right"
+                y = 3 * BLOCK_SIZE
+                bullet_dir = "down"
+        case "right_left":
+            y = (position+2) * BLOCK_SIZE
+            if (index < len(slots) / 2):
+                x = BLOCK_SIZE
+                bullet_dir = "right"
             else:
-                bullet.x = WIDTH - 2*block_size
-                bullet.y = (get_pattern(pattern_index,i)+3)*bullet.size
-                bullet.direction = "left"
+                x = WIDTH - 2*BLOCK_SIZE
+                bullet_dir = "left"
+        case "left_right":
+            y = (position+2) * BLOCK_SIZE
+            if (index < len(slots) / 2):
+                x = WIDTH - 2*BLOCK_SIZE
+                bullet_dir = "left"
+            else:
+                x = BLOCK_SIZE
+                bullet_dir = "right"
+        case "udlr":
+            quarter = len(slots) / 4
+            if index < quarter:
+                x = position * BLOCK_SIZE
+                y = HEIGHT - 2*BLOCK_SIZE
+                bullet_dir = "up"
+            elif index < 2*quarter:
+                x = position * BLOCK_SIZE
+                y = 3 * BLOCK_SIZE
+                bullet_dir = "down"
+            elif index < 3*quarter:
+                x = WIDTH - 2*BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
+                bullet_dir = "left"
+            else:
+                x = BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
+                bullet_dir = "right"
+        case "lrud":
+            quarter = len(slots) / 4
+            if index < quarter:
+                x = WIDTH - 2*BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
+                bullet_dir = "left"
+            elif index < 2*quarter:
+                x = BLOCK_SIZE
+                y = (position+2) * BLOCK_SIZE
+                bullet_dir = "right"
+            elif index < 3*quarter:
+                x = position * BLOCK_SIZE
+                y = HEIGHT - 2*BLOCK_SIZE
+                bullet_dir = "up"
+            else:
+                x = position * BLOCK_SIZE
+                y = 3 * BLOCK_SIZE
+                bullet_dir = "down"
+    global bullet_speed
+    global bullet_wait
+    return Bullet(x, y, BLOCK_SIZE, bullet_dir, bullet_speed, bullet_wait)
 
+def spawn_wave(pattern_index: int):
+    global bullet_wait, bullet_speed
+    spread = patterns[pattern_index][0]
+    direction = patterns[pattern_index][1]
+    if spread == 1:
+        slots = list(random.sample(range(1, MAX_BULLET_NUMBER+1), k = MAX_BULLET_NUMBER-6))
+    elif spread == 2:
+        slots = list(i for i in range(1, MAX_BULLET_NUMBER+1) if (i-1)%4 < 2)
+    elif spread == 3:
+        slots = list(range(1, MAX_BULLET_NUMBER-3))
+    elif spread == 4:
+        slots = list(range(5, MAX_BULLET_NUMBER+1))
+    else:
+        slots = list(range(1, MAX_BULLET_NUMBER+1))  
+    
+    wave = []
+    for i, pos in enumerate(slots):
+        wave.append(new_bullet(direction, i, pos, slots))
 
-def get_pattern(pattern_index, slot):
-    if g_pattern[pattern_index][0] == 1:
-        return random.randint(1,20)
-    elif g_pattern[pattern_index][0] == 2:
-        if slot % 2 == 0:
-            return slot
-        else:
-            return slot + 1
-    elif g_pattern[pattern_index][0] == 3:
-        return slot
-    elif g_pattern[pattern_index][0] == 4:
-        return 20-slot
-
-
+    return wave
+    
 def main(window): #就main，沒什麼好說的?
     clock = pygame.time.Clock()
     pattern_index = 0
     background, bg_image = get_background("Blue.png")
-
+    font = pygame.font.Font("assets/fonts/UbuntuMono-B.ttf", 50)
     player = Player(600, 480, 32, 32)
     health = Health(50, 50, 100, 10, 100)
     score = Score(0,0)
+    global high_score
     dead = False
     #畫框框
-    floor  = [Block(i * block_size, HEIGHT - block_size, block_size) for i in range(WIDTH // block_size)]
-    ceil = [Block(i * block_size, 2 * block_size, block_size) for i in range(WIDTH // block_size)]
-    wall1 = [Block(0, HEIGHT - (i+1)* block_size, block_size) for i in range(1, HEIGHT // block_size - 2)]
-    wall2 = [Block(WIDTH - block_size, HEIGHT - (i+1)* block_size, block_size) for i in range(1, HEIGHT // block_size - 2)]
+    floor  = [Block(i * BLOCK_SIZE, HEIGHT - BLOCK_SIZE, BLOCK_SIZE) for i in range(WIDTH // BLOCK_SIZE)]
+    ceil = [Block(i * BLOCK_SIZE, 2 * BLOCK_SIZE, BLOCK_SIZE) for i in range(WIDTH // BLOCK_SIZE)]
+    wall1 = [Block(0, HEIGHT - (i+1)* BLOCK_SIZE, BLOCK_SIZE) for i in range(1, HEIGHT // BLOCK_SIZE - 2)]
+    wall2 = [Block(WIDTH - BLOCK_SIZE, HEIGHT - (i+1)* BLOCK_SIZE, BLOCK_SIZE) for i in range(1, HEIGHT // BLOCK_SIZE - 2)]
     frame = [*floor, *wall1, *wall2, *ceil]
 
-    bullet1 = [Bullet(random.randint(1,20)*block_size, 3*block_size, 40, "down", 10) for i in range(BULLET_NUMBER)]
+    bullets = spawn_wave(pattern_index)
+    if isfile(MAIN_MUSIC_PATH):
+        try:
+            pygame.mixer.music.load(MAIN_MUSIC_PATH)
+            main_music_loaded = True
+        except Exception as e:
+            print("Could not load main music:", e)
+    if main_music_loaded and not pygame.mixer.music.get_busy():
+        pygame.mixer.music.play(-1)
 
     #這裡的會一直跑
     run = True
     while run:
-        while run:
+        while bullets:
             clock.tick(FPS)
 
             for event in pygame.event.get():
@@ -619,23 +717,37 @@ def main(window): #就main，沒什麼好說的?
                 break
             player.loop(FPS)
 
-            for bullet in bullet1:
+            for bullet in bullets:
                 bullet.loop()
-                
+            
+            bullets = [b for b in bullets if not b.is_offscreen()]
 
-            bullet_collide(player,bullet1, health)
-
+            if bullet_collide(player, bullets, health):
+                if pygame.mixer.get_init() and hurt_sfx:
+                    ch = pygame.mixer.find_channel()
+                    if ch:
+                        ch.play(hurt_sfx)
 
             handle_move(player, frame)
-            draw(window, background, bg_image, player, frame, health, bullet1, score)
+
             score.score += 1
 
-            if (bullet1[0].y < 3*block_size) or (bullet1[0].y > HEIGHT) or (bullet1[0].x < 0) or (bullet1[0].x > WIDTH):
-                break
-        next_run(bullet1, pattern_index)
+            # Highscore text changing
+            high_score_text = font.render(f"HIGHSCORE: {high_score}", True, (255, 255, 255))
+            high_score_text_rect = high_score_text.get_rect(center =(WIDTH - 200, 40))
+
+            if (score.score > high_score):
+                high_score = score.score
+            
+            draw(window, background, bg_image, player, frame, health, bullets, score, high_score_text, high_score_text_rect)
+
         pattern_index += 1
-        if pattern_index >= len(g_pattern):
+        if pattern_index == len(patterns):
             pattern_index = 0
+            global bullet_speed, bullet_wait
+            bullet_speed += 2
+            bullet_wait = max(0, bullet_wait-20)
+        bullets = spawn_wave(pattern_index)
         if dead:
             killed_by_paimon(window,score.score)
             break
